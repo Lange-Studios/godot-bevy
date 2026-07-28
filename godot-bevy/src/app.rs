@@ -115,7 +115,7 @@ impl BevyApp {
             .get_main_loop()?
             .try_cast::<godot::classes::SceneTree>()
             .ok()?
-            .get_root()?
+            .get_root()
             .try_get_node_as::<BevyApp>("BevyAppSingleton")
     }
 

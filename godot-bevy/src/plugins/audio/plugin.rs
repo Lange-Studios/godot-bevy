@@ -393,11 +393,10 @@ fn process_play_command(
     };
 
     if let Some(handle) = player_handle {
-        if let Some(mut root) = scene_tree.get().get_root() {
-            // Get the node from the handle and add it to the scene tree
-            let node = godot.get::<godot::classes::Node>(handle);
-            root.add_child(&node);
-        }
+        let mut root = scene_tree.get().get_root();
+        // Get the node from the handle and add it to the scene tree
+        let node = godot.get::<godot::classes::Node>(handle);
+        root.add_child(&node);
 
         // Now that the node is in the scene tree, start playback
         start_audio_playback(godot, handle);

@@ -148,7 +148,7 @@ fn test_reparent_to_root_clears_godot_child_of(ctx: &TestContext) -> godot::task
             "child under a mirrored parent should have GodotChildOf"
         );
 
-        let root = ctx_clone.scene_tree.get_tree().get_root().unwrap();
+        let root = ctx_clone.scene_tree.get_tree().get_root();
         child
             .clone()
             .reparent(&root.upcast::<godot::classes::Node>());

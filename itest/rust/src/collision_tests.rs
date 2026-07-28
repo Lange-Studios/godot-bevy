@@ -64,7 +64,7 @@ fn find_collision_watcher(
     scene_tree: &Gd<godot::classes::Node>,
 ) -> Option<Gd<godot::classes::Node>> {
     let tree = scene_tree.get_tree();
-    let root = tree.get_root()?;
+    let root = tree.get_root();
     root.try_get_node_as::<godot::classes::Node>("BevyAppSingleton/CollisionWatcher")
 }
 

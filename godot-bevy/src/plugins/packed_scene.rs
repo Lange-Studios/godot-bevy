@@ -236,7 +236,7 @@ fn spawn_scene(
                 parent.add_child(&instance);
             }
             None => {
-                scene_tree.get().get_root().unwrap().add_child(&instance);
+                scene_tree.get().get_root().add_child(&instance);
             }
         }
 
