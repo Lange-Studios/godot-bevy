@@ -3,7 +3,9 @@ mod emit;
 mod godot_node;
 mod node_tree_view;
 
-use crate::godot_node::{derive_bevy_components, derive_godot_node_component};
+use crate::godot_node::{
+    derive_bevy_components, derive_godot_node_component, derive_godot_resource,
+};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse::Parser;
@@ -292,6 +294,35 @@ pub fn derive_bevy_components_entry(item: TokenStream) -> TokenStream {
 pub fn component_as_godot_node(input: TokenStream) -> TokenStream {
     let parsed: DeriveInput = parse_macro_input!(input as DeriveInput);
     derive_godot_node_component(parsed)
+        .unwrap_or_else(Error::into_compile_error)
+        .into()
+}
+
+/// # Generates a Godot Resource class from a Bevy type
+///
+/// Derive `GodotResource` to generate a Godot class extending `Resource` whose `#[export]`
+/// properties are authored in the Godot inspector.
+///
+/// ## Struct-level attributes
+///
+/// - `#[gdbevy(base = Resource)]`: Base class to inherit from (defaults to `Resource`).
+/// - `#[gdbevy(class_name = Name)]`: Name of the generated Godot class.
+///
+/// ## Field-level attributes
+///
+/// - `#[gdbevy(export)]`: Exposes the field as a Godot `#[export]` property.
+///
+/// ## Example
+///
+/// ```rust,ignore
+/// #[derive(Component, GodotResource, Default)]
+/// #[gdbevy(base = Resource)]
+/// pub struct Health2(#[gdbevy(export)] pub f64);
+/// ```
+#[proc_macro_derive(GodotResource, attributes(gdbevy))]
+pub fn derive_godot_resource_entry(input: TokenStream) -> TokenStream {
+    let parsed: DeriveInput = parse_macro_input!(input as DeriveInput);
+    derive_godot_resource(parsed)
         .unwrap_or_else(Error::into_compile_error)
         .into()
 }

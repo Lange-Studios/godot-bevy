@@ -63,6 +63,97 @@ fn emit_node_class(plan: &ClassPlan, input: &DeriveInput) -> TokenStream2 {
     }
 }
 
+pub fn emit_resource(plan: &ClassPlan, input: &DeriveInput) -> TokenStream2 {
+    let class = &plan.godot_class;
+    let base = &plan.base;
+    let primary_path = &plan.primary.path;
+
+    // 1. Generate export fields on the generated Godot Resource class
+    let mut exports: Vec<TokenStream2> = Vec::new();
+    for m in &plan.primary.fields {
+        let ty = m
+            .as_type
+            .clone()
+            .or_else(|| primary_field_type(input, &m.godot_prop));
+        exports.push(export_field(m, ty));
+    }
+    for c in &plan.companions {
+        if !c.generated_exports {
+            continue;
+        }
+        match &c.init {
+            ComponentInit::Marker => {}
+            ComponentInit::Newtype(m) => exports.push(export_field(m, m.as_type.clone())),
+            ComponentInit::Fields(ms) => {
+                for m in ms {
+                    exports.push(export_field(m, m.as_type.clone()));
+                }
+            }
+        }
+    }
+
+    // 2. Build direct field extraction (self.#prop instead of node.bind().#prop)
+    let is_tuple = match &input.data {
+        Data::Struct(s) => matches!(s.fields, syn::Fields::Unnamed(_)),
+        _ => false,
+    };
+
+    let from_resource_body = if plan.primary.fields.is_empty() {
+        quote!(#primary_path::default())
+    } else if is_tuple {
+        let inits = plan.primary.fields.iter().map(|m| {
+            let prop = &m.godot_prop;
+            let read = quote!(self.#prop.clone());
+            match &m.with {
+                Some(w) => quote!(#w(#read)),
+                None => read,
+            }
+        });
+        quote!(#primary_path( #(#inits),* ))
+    } else {
+        let inits = plan.primary.fields.iter().map(|m| {
+            let field = m.bevy_field.as_ref().unwrap_or(&m.godot_prop);
+            let prop = &m.godot_prop;
+            let read = quote!(self.#prop.clone());
+            let read = match &m.with {
+                Some(w) => quote!(#w(#read)),
+                None => read,
+            };
+            quote!(#field: #read)
+        });
+        quote!(#primary_path { #(#inits,)* ..::core::default::Default::default() })
+    };
+
+    // 3. Emit the GodotClass struct and Bevy conversion methods
+    quote! {
+        #[derive(godot::prelude::GodotClass)]
+        #[class(base = #base, init)]
+        pub struct #class {
+            base: godot::prelude::Base<godot::classes::#base>,
+            #(#exports,)*
+        }
+
+        impl #class {
+            /// Converts the Godot Resource into the primary Bevy struct/component.
+            pub fn to_bevy(&self) -> #primary_path {
+                #from_resource_body
+            }
+        }
+
+        impl ::core::convert::From<&#class> for #primary_path {
+            fn from(res: &#class) -> Self {
+                res.to_bevy()
+            }
+        }
+
+        impl ::core::convert::From<godot::prelude::Gd<#class>> for #primary_path {
+            fn from(res: godot::prelude::Gd<#class>) -> Self {
+                res.bind().to_bevy()
+            }
+        }
+    }
+}
+
 fn export_field(m: &Mapping, ty: Option<Type>) -> TokenStream2 {
     let prop = &m.godot_prop;
     let init = m.default.as_ref().map(|d| {
