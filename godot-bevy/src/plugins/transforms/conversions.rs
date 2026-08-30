@@ -1,5 +1,6 @@
 use bevy_math::{Quat, Vec3, vec3};
 use bevy_transform::components::Transform as BevyTransform;
+use godot::builtin::math::FloatExt;
 use godot::builtin::{Basis, Quaternion, Transform2D as GodotTransform2D, Vector3};
 use godot::builtin::{Transform3D as GodotTransform3D, Vector2};
 
@@ -17,7 +18,11 @@ impl IntoBevyTransform for GodotTransform3D {
 
         // Get rotation from the basis
         // Note: get_quaternion() internally calls orthonormalized() to handle scaled bases
-        let rotation = self.basis.get_quaternion().to_quat();
+        //       Check determinant().is_zero_approx() otherwise get_quaternion may panic.
+        let rotation = match self.basis.determinant().is_zero_approx() {
+            true => Quat::IDENTITY,
+            false => self.basis.get_quaternion().to_quat(),
+        };
 
         BevyTransform {
             translation,
