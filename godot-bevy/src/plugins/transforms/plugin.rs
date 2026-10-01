@@ -36,12 +36,15 @@ impl Default for GodotTransformSyncPlugin {
 
 impl Plugin for GodotTransformSyncPlugin {
     fn build(&self, app: &mut App) {
-        // Register Transform component with custom initialization that reads from Godot
+        // Register Transform component with custom initialization that reads from Godot.
+        // `insert_if_new`: an entity that already has a `Transform` when its node is bound to it
+        // (one that bound a node by inserting `GodotNodeHandle` itself) keeps its own; Bevy owns
+        // it, and the Bevy->Godot write moves the node to match.
         app.register_scene_tree_component_with_init::<Transform, _>(|entity, node| {
             if let Some(node3d) = node.try_get::<Node3D>() {
-                entity.insert(node3d.get_transform().to_bevy_transform());
+                entity.insert_if_new(node3d.get_transform().to_bevy_transform());
             } else if let Some(node2d) = node.try_get::<Node2D>() {
-                entity.insert(node2d.get_transform().to_bevy_transform());
+                entity.insert_if_new(node2d.get_transform().to_bevy_transform());
             }
         })
         // Seed the shadow from the node at registration so shadow == Transform ==
