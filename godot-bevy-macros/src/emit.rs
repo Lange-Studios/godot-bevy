@@ -63,11 +63,13 @@ fn emit_node_class(plan: &ClassPlan, input: &DeriveInput) -> TokenStream2 {
 
 fn export_field(m: &Mapping, ty: Option<Type>) -> TokenStream2 {
     let prop = &m.godot_prop;
+    let docs = &m.docs;
     let init = m.default.as_ref().map(|d| {
         let val = paren_wrap(d);
         quote!(#[init(val = #val)])
     });
     quote! {
+        #(#docs)*
         #[export]
         #init
         #prop: #ty

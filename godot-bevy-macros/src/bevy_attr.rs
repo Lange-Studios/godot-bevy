@@ -46,6 +46,8 @@ pub struct Mapping {
     pub as_type: Option<syn::Type>,
     pub default: Option<syn::Expr>,
     pub with: Option<syn::Path>,
+    /// The field's `///` comments, carried onto its export so the inspector shows them.
+    pub docs: Vec<syn::Attribute>,
 }
 
 // Summary Debug so tests can `.unwrap_err()` on `Result<ClassPlan, _>`;
@@ -368,6 +370,7 @@ fn cf_companion(raw: RawRequire) -> syn::Result<ComponentPlan> {
                     as_type: Some(as_type),
                     default: cfg.default,
                     with: cfg.with,
+                    docs: Vec::new(),
                 }),
             })
         }
@@ -392,6 +395,7 @@ fn cf_companion(raw: RawRequire) -> syn::Result<ComponentPlan> {
                     as_type: Some(as_type),
                     default: cfg.default,
                     with: cfg.with,
+                    docs: Vec::new(),
                 });
             }
             Ok(ComponentPlan {
@@ -431,6 +435,7 @@ fn gf_companion(raw: RawRequire) -> syn::Result<ComponentPlan> {
                     as_type: None,
                     default: None,
                     with: None,
+                    docs: Vec::new(),
                 })
                 .collect();
             Ok(ComponentPlan {
@@ -468,6 +473,12 @@ fn collect_primary_fields(input: &DeriveInput) -> syn::Result<Vec<Mapping>> {
             as_type: d.as_type,
             default: d.default,
             with: d.with,
+            docs: field
+                .attrs
+                .iter()
+                .filter(|attr| attr.path().is_ident("doc"))
+                .cloned()
+                .collect(),
         });
     }
     Ok(out)
@@ -514,6 +525,7 @@ fn collect_field_bindings(input: &DeriveInput) -> syn::Result<Vec<ComponentPlan>
                 as_type: None,
                 default: None,
                 with: d.with,
+                docs: Vec::new(),
             }),
         });
     }
